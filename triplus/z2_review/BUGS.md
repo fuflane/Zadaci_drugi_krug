@@ -1,0 +1,15 @@
+# Bugovi
+
+| # | Redak | Klasa problema | Zašto je bug | Manifestacija | Fix |
+| - | ----- | -------------- | ------------ | ------------- | --- |
+| 1 | 83-84, 212, 218 | Race condition | ISR flagovi bez volatile | Potencijalni Race condition, u SysTick_Handleru se postavljaju, a brišu unutar main petlje - zbog kompajlerskih optimizacija možda im se neće mijenjati stanje  | Dodati volatile |
+| 2 | 106, 111, 121 | Undefined Behaviour | Funkcije se ne koriste u programu (bitmask_lower, set_bit) i postoji mogućnost UB pri shiftu za 32 bita | Dodati provjeru za n |
+| 3 | 147 - 149 | Logička pogreška | Gubi se informacija o negativnosti broja | u slučaju negativne temperature dobiva se potpuno kriva vrijednost  | (hi & 0x1F) -> (hi & 0x0F), u slučaju postojanja negativnog signa, napraviti dvojni komplement cijelog 16-bitnog broja s 0xFFFF - result |
+| 4 | 152 | Aritmetička greška | dijeljenjem sa 16 smanjuje se preciznost na samo 0.5°C | u daljnjim koracima već pri 0.25°C zaokružuje se na 0.2 | Koristiti po specifikaciji proizvođača - donja 4 bita predstavljaju razlomački dio, gornjih 8 cjelobrojni |
+| 5 | 180-181 | Stack overflow | Zauzimanje memorije u rerkurzivnoj funkciji radi varijable koja se ne koristi što je dodatno skriveno od kommpajlera | Poziv s većim brojem N-ova može izazvati stack overflow | izbaciti obje linije |
+| 6 | 184 - 186 | Aritmetička greška | Nepotrebno se gubi preciznost prosjeka za svaki neparan n, a rekurzija je zahtjevnija, sporija i nesigurnija od iterrativne petlje | zamijeniti jednostavnim for loopom |
+| 7 | 197 - 199 | Logička greška | If uvjet koji ne radi ništa nakon provjere | Komentar tvrdi da jedan od flagova 'Alert Stat', 'Int. Clear', 'Win. Lock' ili 'Crit. Lock' u CFG rergistru mora biti postavljen - ne vidim razlog tome iz datasheeta pa pretpostavljam da je kod suvišan, cijela funkcija se također nikad ne poziva u kodu | Zauzimanje memorije i par naredbenih ciklusa | izbaciti kod |
+| 8 | 218, 222, 225 | logička greška | Ako se send_flag digne prije nego je sample_flag dignut i obrađen 5 puta (BATCH_SIZE), svi će se dotadašnji uzroci pop-ati i biti izgubljeni, a na UART neće biti ništa odaslano jer collected != BATCH_SIZE | gubitak izmjerenih podataka | Dodati provjeru o broju prikupljenih mjerenja prije pozivanja slanja |
+| 9 | izvan koda | Timing greška | Pri default postavkama - temperaturnoj rezoluciji 0.0625°C, Tconv iznosi 250 ms, što znači kako je besmisleno očitavati uzorak svakih 100 ms | Nekoliko uzastopnih očitanja dat će istu vrijednost | Smanjiti rezoluciju u CFG registru na 0.25°C (Tconv = 65 ms) ili povećati vrijeme očitavanja uzorka sa senzora |
+| 10 | 94 - 95 | timing greška | float računske operacije mogu imati neželjene učinke unutar systick interrupta | Preskakivanje ciklusa | pretvoriti u int operacije |
+| 11 | 95 - 97 | Timing greška | Postavljanje systick_count u 0 unutar interrupta može uzrokovati preskakivanje ciklusa | Preskakivanje ciklusa | postavljati ga u 0 pomoću flaga izvan interrupta |
